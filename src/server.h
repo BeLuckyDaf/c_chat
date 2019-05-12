@@ -13,7 +13,8 @@ pthread_t start_server(u_int16_t port);
 void *connection_handler(void *data);
 void *client_handler(void *data);
 
-int send_to_all_clients(struct message msg);
+int broadcast_client_message(struct client_message msg);
+int broadcast_server_message(char *msg);
 
 int add_client(struct client newcl);
 int remove_client(char *name);

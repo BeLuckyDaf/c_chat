@@ -17,12 +17,17 @@ int client_connect_to_server(char *address, u_int16_t port, char *username) {
 
 	write(server_socket, username, C_CHAT_CLIENT_NAME_LENGTH);
 
-	struct message msg;
-	while(read(server_socket, &msg, sizeof(struct message))) {
-		printf("<%s>: %s\n", msg.sender.name, msg.body);
+	struct client_message msg;
+	while(read(server_socket, &msg, sizeof(struct client_message))) {
+		printf("<%s>: %s\n", msg.sender, msg.body);
 	}
 
 	close(server_socket);
 
+	return 0;
+}
+
+int client_send_message(char *message) {
+	write(server_socket, message, C_CHAT_MESSAGE_LENGTH);
 	return 0;
 }

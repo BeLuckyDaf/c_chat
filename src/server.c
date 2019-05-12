@@ -3,6 +3,8 @@
 static p_array_list clients = NULL;
 static int server_socket = -1;
 
+static const char server_name[C_CHAT_CLIENT_NAME_LENGTH] = "server";
+
 pthread_t start_server(u_int16_t port) {
 	// Initializing clients list
 	if (clients != NULL) {
@@ -43,7 +45,7 @@ void *connection_handler(void* data) {
 			continue;
 		}
 
-		// Receive client's greeting message
+		// Receive client's greeting server_message
 		struct greeting_message message = {0};
 		read(client_socket, &message, sizeof(struct greeting_message));
 
@@ -93,17 +95,16 @@ struct client *create_client(int sockfd, char *name, struct sockaddr_in *addr) {
 void *client_handler(void *data) {
 	struct client *current_client = (struct client *) data;
 	char message[C_CHAT_MESSAGE_LENGTH] = {0};
-	struct message msg;
+	struct client_message msg;
 
-	printf("<server>: %s connected.\n", current_client->name);
+	char connect_message[C_CHAT_MESSAGE_LENGTH] = {0};
+	sprintf(connect_message, "%s connected.", current_client->name);
+	broadcast_server_message(connect_message);
 
 	while(read(current_client->sockfd, message, C_CHAT_MESSAGE_LENGTH) > 0) {
-		// Send to everyone here
-		printf("<%s>: %s\n", current_client->name, message);
-
-		msg.sender = *current_client;
+		memcpy(msg.sender, current_client->name, C_CHAT_CLIENT_NAME_LENGTH);
 		memcpy(msg.body, message, C_CHAT_MESSAGE_LENGTH);
-		send_to_all_clients(msg);
+		broadcast_client_message(msg);
 
 		memset(message, 0, C_CHAT_MESSAGE_LENGTH);
 	}
@@ -117,7 +118,9 @@ void *client_handler(void *data) {
 	// Closing the socket since the client is now officially disconnected
 	close(current_client->sockfd);
 
-	printf("<server>: %s disconnected.\n", current_client->name);
+	char disconnect_message[C_CHAT_MESSAGE_LENGTH] = {0};
+	sprintf(disconnect_message, "%s disconnected.", current_client->name);
+	broadcast_server_message(disconnect_message);
 
 	return NULL;
 }
@@ -139,14 +142,35 @@ int remove_client(char *name) {
 	return -1;
 }
 
-int send_to_all_clients(struct message msg) {
+int broadcast_client_message(struct client_message msg) {
 	int it = array_list_iter(clients);
 	struct client *cl;
+
+	print_client_message(msg);
 
 	// Sending message to every client on the list
 	while(it >= 0) {
 		cl = (struct client *) array_list_get(clients, it);
-		write(cl->sockfd, &msg, sizeof(struct message));
+		write(cl->sockfd, &msg, sizeof(struct client_message));
+		it = array_list_next(clients, it);
+	}
+
+	return 0;
+}
+
+int broadcast_server_message(char *msg) {
+	int it = array_list_iter(clients);
+	struct client *cl;
+	struct client_message clmsg;
+	memcpy(clmsg.sender, server_name, C_CHAT_CLIENT_NAME_LENGTH);
+	memcpy(clmsg.body, msg, C_CHAT_MESSAGE_LENGTH);
+
+	print_client_message(clmsg);
+
+	// Sending message to every client on the list
+	while(it >= 0) {
+		cl = (struct client *) array_list_get(clients, it);
+		write(cl->sockfd, &clmsg, sizeof(struct client_message));
 		it = array_list_next(clients, it);
 	}
 
