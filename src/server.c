@@ -3,6 +3,7 @@
 static p_array_list clients = NULL;
 static int server_socket = -1;
 
+// Need it as a constant variable because will need to copy it
 static const char server_name[C_CHAT_CLIENT_NAME_LENGTH] = "server";
 
 pthread_t start_server(u_int16_t port) {
@@ -75,6 +76,7 @@ int add_client(struct client newcl) {
 		it = array_list_next(clients, it);
 	}
 
+	// If not, copying to another structure and adding to the list
 	cl = (struct client *) malloc(sizeof(struct client));
 	memcpy(cl, &newcl, sizeof(struct client));
 
@@ -84,6 +86,7 @@ int add_client(struct client newcl) {
 }
 
 struct client *create_client(int sockfd, char *name, struct sockaddr_in *addr) {
+	// Packing up all the data into a structure instance
 	struct client *result = (struct client*) malloc(sizeof(struct client));
 	memcpy(result->name, name, C_CHAT_CLIENT_NAME_LENGTH);
 	memcpy(&result->address, addr, sizeof(struct sockaddr_in));
@@ -93,29 +96,32 @@ struct client *create_client(int sockfd, char *name, struct sockaddr_in *addr) {
 }
 
 void *client_handler(void *data) {
+	// Initializing data
 	struct client *current_client = (struct client *) data;
-	char message[C_CHAT_MESSAGE_LENGTH] = {0};
-	struct client_message msg;
-
+	char current_message[C_CHAT_MESSAGE_LENGTH] = {0};
+	struct client_message current_client_message;
 	char connect_message[C_CHAT_MESSAGE_LENGTH] = {0};
+
+	// Tell all the clients that a new one has connected
 	sprintf(connect_message, "%s connected.", current_client->name);
 	broadcast_server_message(connect_message);
 
-	while(read(current_client->sockfd, message, C_CHAT_MESSAGE_LENGTH) > 0) {
-		memcpy(msg.sender, current_client->name, C_CHAT_CLIENT_NAME_LENGTH);
-		memcpy(msg.body, message, C_CHAT_MESSAGE_LENGTH);
-		broadcast_client_message(msg);
+	// Read clients messages and broadcast them to everyone
+	while(read(current_client->sockfd, current_message, C_CHAT_MESSAGE_LENGTH) > 0) {
+		memcpy(current_client_message.sender, current_client->name, C_CHAT_CLIENT_NAME_LENGTH);
+		memcpy(current_client_message.body, current_message, C_CHAT_MESSAGE_LENGTH);
+		broadcast_client_message(current_client_message);
 
-		memset(message, 0, C_CHAT_MESSAGE_LENGTH);
+		memset(current_message, 0, C_CHAT_MESSAGE_LENGTH);
 	}
 
-	// Removing the client from the list of clients now, to free the client
+	// Remove the client from the list of clients now, to free the client
 	// name for further connections
 	if (remove_client(current_client->name) != 0) {
 		printf("<remove_client>: could not remove the client from list.\n");
 	}
 
-	// Closing the socket since the client is now officially disconnected
+	// Close the socket since the client is now officially disconnected
 	close(current_client->sockfd);
 
 	char disconnect_message[C_CHAT_MESSAGE_LENGTH] = {0};
@@ -134,6 +140,7 @@ int remove_client(char *name) {
 		cl = (struct client *) array_list_get(clients, it);
 		if (strcmp(cl->name, name) == 0) {
 			array_list_remove_at(clients, it);
+			free(cl);
 			return 0;
 		}
 		it = array_list_next(clients, it);
