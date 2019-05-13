@@ -22,12 +22,19 @@ int client_connect_to_server(char *address, u_int16_t port, char *username) {
 		printf("<%s>: %s\n", msg.sender, msg.body);
 	}
 
+	printf("<client>: server closed connection.\n");
 	close(server_socket);
+	server_socket = -1;
 
 	return 0;
 }
 
 int client_send_message(char *message) {
+	if (server_socket == -1) {
+		printf("<client>: not connected to server.\n");
+		return -1;
+	}
+
 	write(server_socket, message, C_CHAT_MESSAGE_LENGTH);
 	return 0;
 }
