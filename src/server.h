@@ -1,7 +1,6 @@
 #ifndef C_CHAT_SERVER_H
 #define C_CHAT_SERVER_H
 
-#include <zconf.h>
 #include <stdio.h>
 #include <pthread.h>
 
