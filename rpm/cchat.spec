@@ -1,11 +1,10 @@
 Name: cchat
 Version: 1.0
-Release: 1
+Release: 2
 Summary: Simple chat written in C
 Group: Applications/Social
 License: MIT
 Source0: %{name}-%{version}.tar.gz
-BuildRoot: %{_tmppath}/cchat-root
 
 %description
 This application allows communicating to people all over the world
@@ -18,16 +17,15 @@ by sending text messages whilst using the app.
 make
 
 %install
-mkdir -p $RPM_BUILD_ROOT/usr/local/bin
-install build/chat $RPM_BUILD_ROOT/usr/local/bin/cchat
+mkdir -p %{buildroot}%{_bindir}
+install build/chat %{buildroot}%{_bindir}/cchat
 
 %files
-%defattr(-,root,root)
-/usr/local/bin/cchat
+%{_bindir}/cchat
 
 %clean
 make clean
-rm -rf $RPM_BUILD_ROOT
+rm -rf %{buildroot}
 
 %changelog
 * Thu May 16 2019 Vladislav Smirnov
