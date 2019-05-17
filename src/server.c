@@ -3,16 +3,23 @@
 
 static p_array_list clients = NULL;
 static int server_socket = -1;
+static pthread_mutex_t clients_mutex;
 
 // Need it as a constant variable because will need to copy it
 static const char server_name[C_CHAT_CLIENT_NAME_LENGTH] = "server";
 
+/*
+ * Initializes and starts the server.
+ */
 pthread_t start_server(u_int16_t port) {
+	pthread_mutex_init(&clients_mutex, NULL);
+
 	// Initializing clients list
 	if (clients != NULL) {
-		print_system_message("error", "the server has already started");
+		print_error_message("error", "the server has already started", ERR_SERVER_ALREADY_STARTED);
 		return -1;
 	}
+
 	clients = create_array_list(2);
 
 	// Initializing server socket
@@ -26,11 +33,19 @@ pthread_t start_server(u_int16_t port) {
 	pthread_t tid;
 	pthread_create(&tid, NULL, connection_handler, NULL);
 
-	print_system_message("server", "started");
+	print_system_message("server started");
 
 	return tid;
 }
 
+/*
+ * Handles incoming connections.
+ *
+ * Accepts new cients and adds the to the list of all clients,
+ * if such client already exists, closes the connection.
+ *
+ * Then creates a new thread for that client, using client_handler.
+ */
 void *connection_handler(void* data) {
 	// Start listening
 	listen(server_socket, 3);
@@ -53,7 +68,11 @@ void *connection_handler(void* data) {
 
 		// Adding new client to the list of clients
 		struct client *new_client = create_client(client_socket, message.username, &cl_addr);
-		if (add_client(*new_client) == -1) {
+
+		LOCK(clients_mutex);
+		int add_client_result = add_client(*new_client);
+		UNLOCK(clients_mutex);
+		if (add_client_result == -1) {
 			print_client_exists_message(new_client->name);
 			close(client_socket);
 			continue;
@@ -66,6 +85,10 @@ void *connection_handler(void* data) {
 	return NULL;
 }
 
+/*
+ * Checks if specified client exists in the list, if not, adds
+ * the new client and returns 0, otherwise returns -1.
+ */
 int add_client(struct client newcl) {
 	int it = array_list_iter(clients);
 	struct client *cl;
@@ -86,6 +109,10 @@ int add_client(struct client newcl) {
 	return 0;
 }
 
+/*
+ * Allocates memory for an instance of the client structure and fills it
+ * using the given information about the client.
+ */
 struct client *create_client(int sockfd, char *name, struct sockaddr_in *addr) {
 	// Packing up all the data into a structure instance
 	struct client *result = (struct client*) malloc(sizeof(struct client));
@@ -96,6 +123,12 @@ struct client *create_client(int sockfd, char *name, struct sockaddr_in *addr) {
 	return result;
 }
 
+/*
+ * Reads messages from the client while they are alive.
+ *
+ * Whenever client closes their connection, removes them from
+ * the list of clients.
+ */
 void *client_handler(void *data) {
 	// Initializing data
 	struct client *current_client = (struct client *) data;
@@ -104,13 +137,14 @@ void *client_handler(void *data) {
 	char connect_message[C_CHAT_MESSAGE_LENGTH] = {0};
 
 	// Tell all the clients that a new one has connected
-	sprintf(connect_message, "=== %s connected ===", current_client->name);
-	broadcast_server_message(connect_message);
+	sprintf(connect_message, "%s connected", current_client->name);
+	broadcast_system_message(connect_message);
 
 	// Read clients messages and broadcast them to everyone
 	while(read(current_client->sockfd, current_message, C_CHAT_MESSAGE_LENGTH) > 0) {
 		memcpy(current_client_message.sender, current_client->name, C_CHAT_CLIENT_NAME_LENGTH);
 		memcpy(current_client_message.body, current_message, C_CHAT_MESSAGE_LENGTH);
+		current_client_message.type = CLIENT_MESSAGE;
 		broadcast_client_message(current_client_message);
 
 		memset(current_message, 0, C_CHAT_MESSAGE_LENGTH);
@@ -118,20 +152,27 @@ void *client_handler(void *data) {
 
 	// Remove the client from the list of clients now, to free the client
 	// name for further connections
-	if (remove_client(current_client->name) != 0) {
-		print_system_message("remove_client", "could not remove the client from list");
+	LOCK(clients_mutex);
+	int remove_client_result = remove_client(current_client->name);
+	UNLOCK(clients_mutex);
+	if (remove_client_result != 0) {
+		print_error_message("alist", "could not remove the client from list", ERR_ALIST_COULD_NOT_REMOVE_CLIENT);
 	}
 
 	// Close the socket since the client is now officially disconnected
 	close(current_client->sockfd);
 
 	char disconnect_message[C_CHAT_MESSAGE_LENGTH] = {0};
-	sprintf(disconnect_message, "=== %s disconnected ===", current_client->name);
-	broadcast_server_message(disconnect_message);
+	sprintf(disconnect_message, "%s disconnected", current_client->name);
+	broadcast_system_message(disconnect_message);
 
 	return NULL;
 }
 
+/*
+ * Removes the specified client from the list and returns 0,
+ * if the client was not on the list returns -1.
+ */
 int remove_client(char *name) {
 	int it = array_list_iter(clients);
 	struct client *cl;
@@ -150,6 +191,9 @@ int remove_client(char *name) {
 	return -1;
 }
 
+/*
+ * Sends the given client message to all clients on the list.
+ */
 int broadcast_client_message(struct client_message msg) {
 	int it = array_list_iter(clients);
 	struct client *cl;
@@ -166,14 +210,18 @@ int broadcast_client_message(struct client_message msg) {
 	return 0;
 }
 
-int broadcast_server_message(char *msg) {
+/*
+ * Sends the given system message to all clients on the list.
+ */
+int broadcast_system_message(char *msg) {
 	int it = array_list_iter(clients);
 	struct client *cl;
 	struct client_message clmsg;
 	memcpy(clmsg.sender, server_name, C_CHAT_CLIENT_NAME_LENGTH);
 	memcpy(clmsg.body, msg, C_CHAT_MESSAGE_LENGTH);
+	clmsg.type = SYSTEM_MESSAGE;
 
-	print_message(clmsg.sender, clmsg.body);
+	print_system_message(clmsg.body);
 
 	// Sending message to every client on the list
 	while(it >= 0) {

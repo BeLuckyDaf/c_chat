@@ -13,7 +13,7 @@ void *connection_handler(void *data);
 void *client_handler(void *data);
 
 int broadcast_client_message(struct client_message msg);
-int broadcast_server_message(char *msg);
+int broadcast_system_message(char *msg);
 
 int add_client(struct client newcl);
 int remove_client(char *name);

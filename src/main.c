@@ -2,9 +2,14 @@
 #include "client.h"
 #include "termin.h"
 
+// Global variables are evil
 static int is_server = 0;
 static int connected = 1;
 
+/*
+ * Reads user input, uses global variable is_server to decide
+ * how to treat the given input
+ */
 static void handle_input(char *name) {
 	char *buf = (char *)malloc(sizeof(char)*C_CHAT_MESSAGE_LENGTH);
 	size_t bufsize = C_CHAT_MESSAGE_LENGTH;
@@ -19,6 +24,7 @@ static void handle_input(char *name) {
 			struct client_message msg;
 			strcpy(msg.sender, name);
 			strcpy(msg.body, buf);
+			msg.type = CLIENT_MESSAGE;
 			broadcast_client_message(msg);
 		} else {
 			client_send_message(buf);
@@ -26,12 +32,22 @@ static void handle_input(char *name) {
 	}
 }
 
+/*
+ * Connects to the server and goes into while loop in
+ * client_connect_to_server
+ */
 static void *connect_to_server(void *data) {
 	struct connect_data *conndata = (struct connect_data*) data;
 	client_connect_to_server(conndata->address, conndata->port, conndata->username);
 	connected = 0;
 }
 
+/*
+ * Reads user's settings, such as username, server address,
+ * server port and whether the user is a server.
+ *
+ * Then either creates a server or connects to it.
+ */
 int main(int argc, char *argv[]) {
 	char buf[1024];
 	char *username = (char*) malloc(C_CHAT_CLIENT_NAME_LENGTH);

@@ -5,9 +5,23 @@
 #include <netinet/in.h>
 #include <stdio.h>
 #include <string.h>
+#include <pthread.h>
+
+#define LOCK(M) (pthread_mutex_lock(&(M)))
+#define UNLOCK(M) (pthread_mutex_unlock(&(M)))
 
 #define C_CHAT_CLIENT_NAME_LENGTH 256
 #define C_CHAT_MESSAGE_LENGTH 1024
+
+#define ERR_SERVER_ALREADY_STARTED 1
+#define ERR_ALIST_COULD_NOT_REMOVE_CLIENT 2
+#define ERR_INVALID_ADDRESS 3
+#define ERR_COULD_NOT_CONNECT_TO_SERVER 4
+
+enum MESSAGE_TYPE {
+    SYSTEM_MESSAGE,
+    CLIENT_MESSAGE
+};
 
 struct client {
 	int sockfd;
@@ -21,6 +35,7 @@ struct server_message {
 };
 
 struct client_message {
+    int type;
     char sender[C_CHAT_CLIENT_NAME_LENGTH];
     char body[C_CHAT_MESSAGE_LENGTH];
 };
@@ -35,7 +50,6 @@ struct connect_data {
     char *username;
 };
 
-void print_client_message(struct client_message);
 struct client_message server_to_client_message(struct server_message msg);
 
 #endif // C_CHAT_COMMON_H
