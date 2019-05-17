@@ -19,8 +19,8 @@
 #define ERR_COULD_NOT_CONNECT_TO_SERVER 4
 
 enum MESSAGE_TYPE {
-    SYSTEM_MESSAGE,
-    CLIENT_MESSAGE
+	SYSTEM_MESSAGE,
+	CLIENT_MESSAGE
 };
 
 struct client {
@@ -35,9 +35,9 @@ struct server_message {
 };
 
 struct client_message {
-    int type;
-    char sender[C_CHAT_CLIENT_NAME_LENGTH];
-    char body[C_CHAT_MESSAGE_LENGTH];
+	int type;
+	char sender[C_CHAT_CLIENT_NAME_LENGTH];
+	char body[C_CHAT_MESSAGE_LENGTH];
 };
 
 struct greeting_message {
@@ -45,9 +45,9 @@ struct greeting_message {
 };
 
 struct connect_data {
-    char *address;
-    u_int16_t port;
-    char *username;
+	char *address;
+	u_int16_t port;
+	char *username;
 };
 
 struct client_message server_to_client_message(struct server_message msg);
