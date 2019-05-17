@@ -28,6 +28,7 @@ make clean
 rm -rf %{buildroot}
 
 %changelog
+* Fri May 17 2019 Vladislav Smirnov
+- Fixed macros in files and install
 * Thu May 16 2019 Vladislav Smirnov
 - Initial build
-
