@@ -1,4 +1,5 @@
 #include "server.h"
+#include "termin.h"
 
 static p_array_list clients = NULL;
 static int server_socket = -1;
@@ -9,7 +10,7 @@ static const char server_name[C_CHAT_CLIENT_NAME_LENGTH] = "server";
 pthread_t start_server(u_int16_t port) {
 	// Initializing clients list
 	if (clients != NULL) {
-		printf("<error>: the server has already started.\n");
+		print_system_message("error", "the server has already started");
 		return -1;
 	}
 	clients = create_array_list(2);
@@ -18,14 +19,14 @@ pthread_t start_server(u_int16_t port) {
 	server_socket = create_tcp_socket();
 	struct sockaddr_in *server_address = create_sockaddr(port);
 	if (bind(server_socket, (struct sockaddr*)server_address, sizeof(*server_address)) == -1) {
-		printf("<bind>: bind failed, error code %d.\n", errno);
+		print_error_message("bind", "bind failed", errno);
 		return -1;
 	}
 
 	pthread_t tid;
 	pthread_create(&tid, NULL, connection_handler, NULL);
 
-	printf("<server>: started.\n");
+	print_system_message("server", "started");
 
 	return tid;
 }
@@ -42,7 +43,7 @@ void *connection_handler(void* data) {
 		// Accept the connection and ignore if failed
 		int client_socket = accept(server_socket, (struct sockaddr*)&cl_addr, &cl_addr_size);
 		if (client_socket == -1) {
-			printf("<accept>: accept failed, error code %d.\n", errno);
+			print_error_message("accept", "accept failed", errno);
 			continue;
 		}
 
@@ -53,7 +54,7 @@ void *connection_handler(void* data) {
 		// Adding new client to the list of clients
 		struct client *new_client = create_client(client_socket, message.username, &cl_addr);
 		if (add_client(*new_client) == -1) {
-			printf("<accept>: client \"%s\" already exists.\n", new_client->name);
+			print_client_exists_message(new_client->name);
 			close(client_socket);
 			continue;
 		}
@@ -103,7 +104,7 @@ void *client_handler(void *data) {
 	char connect_message[C_CHAT_MESSAGE_LENGTH] = {0};
 
 	// Tell all the clients that a new one has connected
-	sprintf(connect_message, "%s connected.", current_client->name);
+	sprintf(connect_message, "=== %s connected ===", current_client->name);
 	broadcast_server_message(connect_message);
 
 	// Read clients messages and broadcast them to everyone
@@ -118,14 +119,14 @@ void *client_handler(void *data) {
 	// Remove the client from the list of clients now, to free the client
 	// name for further connections
 	if (remove_client(current_client->name) != 0) {
-		printf("<remove_client>: could not remove the client from list.\n");
+		print_system_message("remove_client", "could not remove the client from list");
 	}
 
 	// Close the socket since the client is now officially disconnected
 	close(current_client->sockfd);
 
 	char disconnect_message[C_CHAT_MESSAGE_LENGTH] = {0};
-	sprintf(disconnect_message, "%s disconnected.", current_client->name);
+	sprintf(disconnect_message, "=== %s disconnected ===", current_client->name);
 	broadcast_server_message(disconnect_message);
 
 	return NULL;
@@ -153,7 +154,7 @@ int broadcast_client_message(struct client_message msg) {
 	int it = array_list_iter(clients);
 	struct client *cl;
 
-	print_client_message(msg);
+	print_message(msg.sender, msg.body);
 
 	// Sending message to every client on the list
 	while(it >= 0) {
@@ -172,7 +173,7 @@ int broadcast_server_message(char *msg) {
 	memcpy(clmsg.sender, server_name, C_CHAT_CLIENT_NAME_LENGTH);
 	memcpy(clmsg.body, msg, C_CHAT_MESSAGE_LENGTH);
 
-	print_client_message(clmsg);
+	print_message(clmsg.sender, clmsg.body);
 
 	// Sending message to every client on the list
 	while(it >= 0) {

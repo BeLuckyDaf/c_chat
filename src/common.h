@@ -29,6 +29,12 @@ struct greeting_message {
 	char username[C_CHAT_CLIENT_NAME_LENGTH];
 };
 
+struct connect_data {
+    char *address;
+    u_int16_t port;
+    char *username;
+};
+
 void print_client_message(struct client_message);
 struct client_message server_to_client_message(struct server_message msg);
 

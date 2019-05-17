@@ -1,8 +1,5 @@
 #include "common.h"
-
-void print_client_message(struct client_message msg) {
-	printf("<%s>: %s\n", msg.sender, msg.body);
-}
+#include "termin.h"
 
 struct client_message server_to_client_message(struct server_message msg) {
 	struct client_message result;
