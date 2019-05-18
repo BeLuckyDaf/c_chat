@@ -33,5 +33,8 @@ Note: if you have rpmbuild directory at `~/rpmbuild`, you could use the provided
 simply run `./build_rpm.sh` in the root directory of the repository. The script will run `git pull`,
 create a tarball with the source code, put it into the SOURCES directory and run `rpmbuild ...`.
 
+## Development
+You can use CLion and open the CMake project, hence the `CMakeLists.txt`.
+
 ## Usage
 Simply run the application and follow the instructions.
