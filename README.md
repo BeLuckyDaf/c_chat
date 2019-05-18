@@ -29,5 +29,9 @@ You will find the RPMs at `/path/to/rpmbuild/RPMS`.
 
 Note: you might need to install `gcc.i386` for 32-bit binaries.
 
+Note: if you have rpmbuild directory at `~/rpmbuild`, you could use the provided shell script,
+simply run `./build_rpm.sh` in the root directory of the repository. The script will run `git pull`,
+create a tarball with the source code, put it into the SOURCES directory and run `rpmbuild ...`.
+
 ## Usage
 Simply run the application and follow the instructions.
