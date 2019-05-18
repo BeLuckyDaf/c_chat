@@ -1,9 +1,7 @@
 #!/bin/bash
 
-# eval $(ssh-agent)
-# ssh-add ~/beluc_rsa
-# git pull
-# git submodule update --init --recursive
+git pull
+git submodule update --init --recursive
 
 # MAKE SURE YOU'VE GOT YOUR RPMBUILD AT ~/rpmbuild
 # AND THERE IS THE cchat.spec FILE
